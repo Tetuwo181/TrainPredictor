@@ -30,7 +30,7 @@ def load_dataset(root_dir: str,
     :param color: グレースケールかカラーで読み込むか　デフォルトではカラー(RGB)
     :return: numpy形式の画像データの配列とラベルの配列とクラスの総数のタプル
     """
-    class_names = [path for path in os.listdir(root_dir)]
+    class_names = os.listdir(root_dir)
     print("all classes", class_names)
     encoder = label_encoder(class_names)
     result_img_set = []
