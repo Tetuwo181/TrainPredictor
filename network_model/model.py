@@ -2,6 +2,7 @@ import keras.engine.training
 import keras.callbacks
 import keras.backend.tensorflow_backend as KTF
 import tensorflow as tf
+from keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 from typing import List
 from typing import Tuple
@@ -9,10 +10,12 @@ from typing import Optional
 import os
 from datetime import datetime
 import json
+import gc
 
 
 class Model(object):
-    def __init__(self, model_base: keras.engine.training.Model,
+    def __init__(self,
+                 model_base: keras.engine.training.Model,
                  class_set: List[str],
                  tf_log_path:str = os.path.join(os.getcwd(), "tflog")):
         """
@@ -28,7 +31,7 @@ class Model(object):
             data: np.ndarray,
             label_set:  np.ndarray,
             epochs: int,
-            validation_data:Optional[Tuple[np.ndarray, np.ndarray]] = None):
+            validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None):
         """
         モデルの適合度を算出する
         :param data: 学習に使うデータ
@@ -43,7 +46,37 @@ class Model(object):
             self.__model.fit(data, label_set, epochs=epochs, validation_data=validation_data)
         return self
 
-    def predict(self, data: np.ndarray)->Tuple[np.array, np.array]:
+    def fit_generator(self,
+                      image_generator: ImageDataGenerator,
+                      data: np.ndarray,
+                      label_set:  np.ndarray,
+                      epochs: int,
+                      generator_batch_size: int = 32,
+                      validation_data: Optional[Tuple[np.ndarray, np.ndarray]] = None):
+        """
+        モデルの適合度を算出する
+        generatorを使ってデータを水増しして学習する場合に使用する
+        :param image_generator: keras形式でのデータを水増しするジェネレータ
+        :param data: 学習に使うデータ
+        :param label_set: 教師ラベル
+        :param epochs: エポック数
+        :param generator_batch_size: ジェネレータのバッチサイズ
+        :param validation_data: テストに使用するデータ　実データとラベルのセットのタプル
+        :return:
+        """
+        image_generator.fit(data)
+        if validation_data is None:
+            self.__model.fit_generator(image_generator.flow(data, label_set, batch_size=generator_batch_size),
+                                       steps_per_epoch=len(data) / generator_batch_size,
+                                       epochs=epochs)
+        else:
+            self.__model.fit_generator(image_generator.flow(data, label_set, batch_size=generator_batch_size),
+                                       steps_per_epoch=len(data)/generator_batch_size,
+                                       epochs=epochs,
+                                       validation_data=validation_data)
+        return self
+
+    def predict(self, data: np.ndarray) -> Tuple[np.array, np.array]:
         """
         モデルの適合度から該当するクラスを算出する
         :param data: 算出対象となるデータ
@@ -55,7 +88,7 @@ class Model(object):
 
     def calc_succeed_rate(self,
                           data_set: np.ndarray,
-                          label_set: np.ndarray,)->float:
+                          label_set: np.ndarray,) -> float:
         """
         指定したデータセットに対しての正答率を算出する
         :param data_set: テストデータ
@@ -74,9 +107,12 @@ class Model(object):
              test_data_set: np.ndarray,
              test_label_set: np.ndarray,
              epochs: int,
-             result_dir_name:str = None,
-             dir_path:str = None ,
-             model_name: str = None):
+             image_generator: ImageDataGenerator = None,
+             generator_batch_size: int = 32,
+             result_dir_name: str = None,
+             dir_path: str = None,
+             model_name: str = None,
+             will_del_from_ram: bool = False):
         """
         指定したデータセットに対しての正答率を算出する
         :param train_data_set: 学習に使用したデータ
@@ -84,12 +120,23 @@ class Model(object):
         :param test_data_set: テストデータ
         :param test_label_set: テストのラベル
         :param epochs: エポック数
+        :param image_generator: keras形式でのデータを水増しするジェネレータ これを引数で渡さない場合はデータの水増しをしない
+        :param generator_batch_size: ジェネレータのバッチサイズ
         :param result_dir_name: 記録するためのファイル名のベース
         :param dir_path: 記録するディレクトリ デフォルトではカレントディレクトリ直下にresultディレクトリを作成する
         :param model_name: モデル名　デフォルトではmodel
+        :param will_del_from_ram: 記録後モデルを削除するかどうか
         :return:学習用データの正答率とテスト用データの正答率のタプル
         """
-        self.fit(train_data_set, train_label_set, epochs, (test_data_set, test_label_set))
+        if image_generator is None:
+            self.fit(train_data_set, train_label_set, epochs, (test_data_set, test_label_set))
+        else:
+            self.fit_generator(image_generator,
+                               train_data_set,
+                               train_label_set,
+                               epochs,
+                               generator_batch_size,
+                               (test_data_set, test_label_set))
         train_rate = self.calc_succeed_rate(train_data_set, train_label_set)
         test_rate = self.calc_succeed_rate(test_data_set, test_label_set)
         # 教師データと予測されたデータの差が0でなければ誤判定
@@ -97,14 +144,15 @@ class Model(object):
             return train_rate, test_rate
         finally:
             if (result_dir_name is not None) and (dir_path is not None):
-                self.record(result_dir_name, dir_path, model_name, train_rate, test_rate)
+                self.record(result_dir_name, dir_path, model_name, train_rate, test_rate, will_del_from_ram)
 
     def record(self,
                result_dir_name: str,
                dir_path: str = os.path.join(os.getcwd(), "result"),
                model_name: str = "model",
-               train_succeed_rate:Optional[float] = None,
-               test_succeed_rate:Optional[float] = None):
+               train_succeed_rate: Optional[float] = None,
+               test_succeed_rate: Optional[float] = None,
+               will_del_from_ram: bool = False) -> None:
         """
         モデルや設定などを記録する
         :param result_dir_name: 記録するためのファイル名のベース
@@ -112,13 +160,19 @@ class Model(object):
         :param model_name: モデル名　デフォルトではmodel
         :param train_succeed_rate: モデルをテストした際の教師データでの正答率　指定しなければ書き出さない
         :param test_succeed_rate: モデルをテストした際のテストデータでの正答率　指定しなければ書き出さない
+        :param will_del_from_ram: 記録後モデルを削除するかどうか
         :return:
         """
+        print("start record")
         if not os.path.exists(dir_path):
             os.mkdir(dir_path)
         result_path = os.path.join(dir_path, result_dir_name+datetime.now().strftime("%Y%m%d%H%M%S"))
         os.mkdir(result_path)
         self.__model.save(os.path.join(result_path, model_name + ".h5"))
+        if will_del_from_ram:
+            del self.__model
+            gc.collect()
+            print("model has deleted")
         write_set = {"class_set": self.__class_set}
         if train_succeed_rate is not None:
             write_set["train_succeed_rate"] = train_succeed_rate
