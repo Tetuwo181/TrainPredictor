@@ -18,6 +18,38 @@ class NormalizeType(Enum):
     Div127_5 = 2
 
 
+def is_image(file_path:str) -> bool:
+    """
+    拡張子から画像ファイルかどうか判定
+    :param file_path:
+    :return:
+    """
+    root, ext = os.path.splitext(file_path)
+    return (ext == ".jpg") or (ext == ".jpeg") or (ext == ".JPG") or (ext == ".JPEG")
+
+
+def load_dataset_path(root_dir: str):
+    """
+    画像データのパスを読み込む
+    :param root_dir: 画像データの格納されているルートディレクトリ。直下に存在するディレクトリ名が各画像のクラス名に
+    :return: 画像データのパスの配列とラベルの配列とクラスの総数のタプル
+    """
+    class_names = os.listdir(root_dir)
+    print("all classes", class_names)
+    encoder = label_encoder(class_names)
+    result_img_set = []
+    result_label_set = []
+    for class_name in class_names:
+        class_dir = os.path.join(root_dir,  class_name)
+        class_path_set = [os.path.join(class_dir,  data_name) for data_name in os.listdir(class_dir)
+                          if is_image(os.path.join(class_dir, data_name))]
+        label_converted = [encoder(class_name) for index in range(len(class_path_set))]
+        result_img_set.extend(class_path_set)
+        result_label_set.extend(label_converted)
+        print("class", class_name, "loaded data_num", len(class_path_set))
+    return np.array(result_img_set), np.array(result_label_set), class_names, len(class_names)
+
+
 def load_dataset(root_dir: str,
                  normalize_type: NormalizeType = NormalizeType.Div255,
                  img_resize_val: Optional[img_size] = None,
@@ -100,7 +132,7 @@ def label_encoder(class_set: List[str]):
 
 
 @jit
-def normalise_img(img: np.ndarray, normalize_type:NormalizeType = NormalizeType.Div255) -> np.ndarray:
+def normalise_img(img: np.ndarray, normalize_type: NormalizeType = NormalizeType.Div255) -> np.ndarray:
     """
     画像を正規化
     :param img: 正規化する対象
@@ -110,7 +142,7 @@ def normalise_img(img: np.ndarray, normalize_type:NormalizeType = NormalizeType.
     if normalize_type == NormalizeType.Div127_5:
         return (img.astype(np.float32)) / 127.5
     if normalize_type == NormalizeType.Div255:
-        return (img.astype(np.float32)) / 127.5
+        return (img.astype(np.float32)) / 255.0
     return img.astype(np.float32)
 
 
