@@ -26,6 +26,7 @@ class Model(object):
         """
         self.__model = model_base
         self.__class_set = class_set
+        self.__input_shape = model_base.input.shape.as_list()
 
     def fit(self,
             data: np.ndarray,
@@ -64,7 +65,9 @@ class Model(object):
         :param validation_data: テストに使用するデータ　実データとラベルのセットのタプル
         :return:
         """
+        print("fit generator")
         image_generator.fit(data)
+        print("start learning")
         if validation_data is None:
             self.__model.fit_generator(image_generator.flow(data, label_set, batch_size=generator_batch_size),
                                        steps_per_epoch=len(data) / generator_batch_size,
@@ -80,11 +83,21 @@ class Model(object):
         """
         モデルの適合度から該当するクラスを算出する
         :param data: 算出対象となるデータ
-        :return: 判定したインデックスと具体的な名前
+        :return: 判定したインデックスと形式名
         """
         result_set = np.array([np.argmax(result) for result in self.__model.predict(data)])
-        class_name_set = [self.__class_set[index] for index in result_set]
+        class_name_set = np.array([self.__class_set[index] for index in result_set])
         return result_set, class_name_set
+
+    def predict_top_n(self, data: np.ndarray, top_num: int = 5) -> List[Tuple[np.array, np.array, np.array]]:
+        """
+        適合度が高い順に車両形式を取得する
+        :param data: 算出対象となるデータ
+        :param top_num: 取得する上位の数値
+        :return: 判定したインデックスと形式名と確率のタプルのリスト
+        """
+        predicted_set = self.__model.predict(data)
+        return [self.get_predicted_upper(predicted_result, top_num) for predicted_result in predicted_set]
 
     def calc_succeed_rate(self,
                           data_set: np.ndarray,
@@ -170,16 +183,31 @@ class Model(object):
         os.mkdir(result_path)
         self.__model.save(os.path.join(result_path, model_name + ".h5"))
         if will_del_from_ram:
+            self.__model = None
             del self.__model
             gc.collect()
             print("model has deleted")
         write_set = {"class_set": self.__class_set}
+        write_set["input_shape"] = self.__input_shape
         if train_succeed_rate is not None:
             write_set["train_succeed_rate"] = train_succeed_rate
         if test_succeed_rate is not None:
             write_set["test_succeed_rate"] = test_succeed_rate
         write_dic = {model_name: write_set}
         json_path = os.path.join(result_path, "model_conf.json")
-        with open(json_path, 'w') as fw:
-            json.dump(write_dic, fw)
+        with open(json_path, 'w',  encoding='utf8') as fw:
+            json.dump(write_dic, fw, ensure_ascii=False)
+
+    def get_predicted_upper(self, predicted_result: np.ndarray, top_num: int = 5) -> Tuple[np.array, np.array, np.array]:
+        """
+        予測した結果の数値からふさわしい形式を指定した上位n個だけ取り出す
+        :param predicted_result: 予測結果
+        :param top_num:
+        :return:
+        """
+        top_index_set = np.argpartition(-predicted_result, top_num)[:top_num]
+        top_value_set = predicted_result[top_index_set]
+        top_series_set = np.array([self.__class_set[index] for index in top_index_set])
+        return top_index_set, top_value_set, top_series_set
+
 

@@ -13,7 +13,7 @@ def builder(
             channels: int = 3,
             kernel_size: Union[int, Tuple[int, int]] = 3,
             model_name: str = "model1"
-            )->keras.engine.training.Model:
+            ) -> keras.engine.training.Model:
     """
     モデルを作成する
     :param class_num : 出力するクラス数
@@ -28,7 +28,7 @@ def builder(
 
 
 def init_input_image(size: types_of_loco.input_img_size):
-    def builder_of_generator(class_num:int, channels: int =1, kernel_size: Union[int, Tuple[int, int]] = 3):
+    def builder_of_generator(class_num: int, channels: int =1, kernel_size: Union[int, Tuple[int, int]] = 3):
         """
         Ganのgenerator部を作成する
         :param channels:色の出力変数（白黒画像なら1）
