@@ -50,6 +50,6 @@ def builder(
     model.summary()
 
     # モデルをコンパイル
-    model.compile(loss="binary_crossentropy", optimizer=optimizers.Adam())
+    model.compile(loss="binary_crossentropy", optimizer=optimizers.Adam(), metrics=['accuracy'])
 
     return model
