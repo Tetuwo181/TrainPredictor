@@ -87,6 +87,7 @@ def build_input_image(model_builder: Callable[[int], keras.engine.training.Model
             print(model_name_iter, "deleted")
         model = md.Model(model_builder(len(class_set)), class_set)
         model.fit(data_set, label_set, epoch_num).record(result_name, result_dir_path, model_name)
+    return test
 
 
 def build_input_type_dir(model_builder: Callable[[int], keras.engine.training.Model],
@@ -135,14 +136,14 @@ def build_input_type_dir(model_builder: Callable[[int], keras.engine.training.Mo
             print("iteration", fold_itr, "start")
             copied_generator = copy.deepcopy(image_generator)
             # 教師データ読み込み
-            train_data_pathes = np.array([dataset_pathes[index] for index in train_index])
+            train_data_pathes = [dataset_pathes[index] for index in train_index]
             print("load teacher data. data num;", len(train_data_pathes))
             train_data = np.array([dl.load_img(img_path, img_resize_val, color) for img_path in train_data_pathes])
             train_data = dl.normalise_img_set(train_data, normalize_type)
             train_label = np.array([label_set[index] for index in train_index])
 
             # テストデータ読み込み
-            test_data_pathes = np.array([dataset_pathes[index] for index in test_index])
+            test_data_pathes = [dataset_pathes[index] for index in test_index]
             print("load test data data num;", len(test_data_pathes))
             test_data = np.array([dl.load_img(img_path, img_resize_val, color) for img_path in test_data_pathes])
             test_data = dl.normalise_img_set(test_data, normalize_type)
@@ -160,6 +161,7 @@ def build_input_type_dir(model_builder: Callable[[int], keras.engine.training.Mo
                        test_data,
                        test_label,
                        epoch_num,
+                       normalize_type=normalize_type,
                        image_generator=copied_generator,
                        generator_batch_size=generator_batch_size,
                        result_dir_name=result_name,
@@ -185,6 +187,13 @@ def build_input_type_dir(model_builder: Callable[[int], keras.engine.training.Mo
             print(model_name_iter, "deleted")
         model = md.Model(model_builder(len(class_names)), class_names)
         data_set = np.array([dl.load_img(img_path, img_resize_val, color) for img_path in dataset_pathes])
-        model.fit(data_set, label_set, epoch_num).record(result_name, result_dir_path, model_name)
+        model.fit(data_set, label_set, epoch_num)\
+             .record(result_name,
+                     result_dir_path,
+                     model_name,
+                     normalize_type=normalize_type
+                     )
 
     return test_load_from_path
+
+

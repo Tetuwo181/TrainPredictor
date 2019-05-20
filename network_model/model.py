@@ -11,6 +11,8 @@ import os
 from datetime import datetime
 import json
 import gc
+import matplotlib.pyplot as plt
+from DataIO import data_loader as dl
 
 
 class Model(object):
@@ -27,6 +29,7 @@ class Model(object):
         self.__model = model_base
         self.__class_set = class_set
         self.__input_shape = model_base.input.shape.as_list()
+        self.__history = None
 
     def fit(self,
             data: np.ndarray,
@@ -69,14 +72,18 @@ class Model(object):
         image_generator.fit(data)
         print("start learning")
         if validation_data is None:
-            self.__model.fit_generator(image_generator.flow(data, label_set, batch_size=generator_batch_size),
-                                       steps_per_epoch=len(data) / generator_batch_size,
-                                       epochs=epochs)
+            self.__history = self.__model.fit_generator(image_generator.flow(data,
+                                                                             label_set,
+                                                                             batch_size=generator_batch_size),
+                                                        steps_per_epoch=len(data) / generator_batch_size,
+                                                        epochs=epochs)
         else:
-            self.__model.fit_generator(image_generator.flow(data, label_set, batch_size=generator_batch_size),
-                                       steps_per_epoch=len(data)/generator_batch_size,
-                                       epochs=epochs,
-                                       validation_data=validation_data)
+            self.__history = self.__model.fit_generator(image_generator.flow(data,
+                                                                             label_set,
+                                                                             batch_size=generator_batch_size),
+                                                        steps_per_epoch=len(data)/generator_batch_size,
+                                                        epochs=epochs,
+                                                        validation_data=validation_data)
         return self
 
     def predict(self, data: np.ndarray) -> Tuple[np.array, np.array]:
@@ -120,6 +127,7 @@ class Model(object):
              test_data_set: np.ndarray,
              test_label_set: np.ndarray,
              epochs: int,
+             normalize_type: dl.NormalizeType = dl.NormalizeType.Div255,
              image_generator: ImageDataGenerator = None,
              generator_batch_size: int = 32,
              result_dir_name: str = None,
@@ -133,6 +141,7 @@ class Model(object):
         :param test_data_set: テストデータ
         :param test_label_set: テストのラベル
         :param epochs: エポック数
+        :param normalize_type: どのように正規化するか
         :param image_generator: keras形式でのデータを水増しするジェネレータ これを引数で渡さない場合はデータの水増しをしない
         :param generator_batch_size: ジェネレータのバッチサイズ
         :param result_dir_name: 記録するためのファイル名のベース
@@ -157,12 +166,19 @@ class Model(object):
             return train_rate, test_rate
         finally:
             if (result_dir_name is not None) and (dir_path is not None):
-                self.record(result_dir_name, dir_path, model_name, train_rate, test_rate, will_del_from_ram)
+                self.record(result_dir_name,
+                            dir_path,
+                            model_name,
+                            normalize_type,
+                            train_rate,
+                            test_rate,
+                            will_del_from_ram)
 
     def record(self,
                result_dir_name: str,
                dir_path: str = os.path.join(os.getcwd(), "result"),
                model_name: str = "model",
+               normalize_type: Optional[dl.NormalizeType] = None,
                train_succeed_rate: Optional[float] = None,
                test_succeed_rate: Optional[float] = None,
                will_del_from_ram: bool = False) -> None:
@@ -181,6 +197,7 @@ class Model(object):
             os.mkdir(dir_path)
         result_path = os.path.join(dir_path, result_dir_name+datetime.now().strftime("%Y%m%d%H%M%S"))
         os.mkdir(result_path)
+        self.recorf_graph(result_path, model_name)
         self.__model.save(os.path.join(result_path, model_name + ".h5"))
         if will_del_from_ram:
             self.__model = None
@@ -189,6 +206,8 @@ class Model(object):
             print("model has deleted")
         write_set = {"class_set": self.__class_set}
         write_set["input_shape"] = self.__input_shape
+        if normalize_type is not None:
+            write_set["normalize_type"] = normalize_type
         if train_succeed_rate is not None:
             write_set["train_succeed_rate"] = train_succeed_rate
         if test_succeed_rate is not None:
@@ -209,5 +228,38 @@ class Model(object):
         top_value_set = predicted_result[top_index_set]
         top_series_set = np.array([self.__class_set[index] for index in top_index_set])
         return top_index_set, top_value_set, top_series_set
+
+    def recorf_graph(self, result_dir: str, name: str):
+        """
+        正答率などのグラフを保存する
+        :param result_dir: 保存先のディレクトリ
+        :param name: 名前
+        :return:
+        """
+        if self.__history is None:
+            return self
+        plt.plot(self.__history.history['loss'])
+        plt.plot(self.__history.history['val_loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        loss_path = os.path.join(result_dir, name + "_loss.png")
+        plt.savefig(loss_path)
+
+        plt.figure()
+
+        plt.plot(self.__history.history['acc'])
+        plt.plot(self.__history.history['val_acc'])
+        plt.title('model accuracy')
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        acc_path = os.path.join(result_dir, name + "_acc.png")
+        plt.savefig(acc_path)
+
+        plt.figure()
+
+        return self
 
 
