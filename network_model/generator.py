@@ -111,7 +111,7 @@ class DataLoaderFromPathsWithDataAugmentation(Sequence):
         self.__img_resize_val = img_resize_val
         self.__color = color
         self.__class_num = class_num
-        self.__num_batches_per_epoch = self.__augmentation_batch_size * self.__build_original_data_num
+        self.__num_batches_per_epoch = augmentation_batch_size * build_original_data_num
         self.__normalize_type = normalize_type
         print("initialized data_loader with augument")
 

@@ -77,7 +77,7 @@ def load_dataset(root_dir: str,
 
 
 def load_data_in_dir(dir_path: str,
-                     normalize_type:NormalizeType = NormalizeType.Div255,
+                     normalize_type: NormalizeType = NormalizeType.Div255,
                      img_resize_val: Optional[img_size] = None,
                      color: str = "RGB"):
     """
@@ -139,12 +139,12 @@ def normalise_img(img: np.ndarray, normalize_type: NormalizeType = NormalizeType
     :param normalize_type: どのように正規化するか
     :return: 正規化後の配列
     """
-    if normalize_type == NormalizeType.Div127_5:
+    if NormalizeType(normalize_type) is NormalizeType.Div127_5:
         return (img.astype(np.float32) - 127.5) / 127.5
-    if normalize_type == NormalizeType.Div255:
+    if NormalizeType(normalize_type) is NormalizeType.Div255:
         return (img.astype(np.float32)) / 255.0
     return img.astype(np.float32)
-
+    
 
 def normalise_img_set(img_set: np.ndarray, normalize_type: NormalizeType = NormalizeType.Div255) -> np.ndarray:
     """
