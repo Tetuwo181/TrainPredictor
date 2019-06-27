@@ -206,6 +206,7 @@ def build_input_type_dir_for_large_dataset(model_builder: Callable[[int], keras.
                                            image_generator: ImageDataGenerator = None,
                                            generator_batch_size: int = 32,
                                            build_original_data_num: int = 4,
+                                           test_generator_batch_size: int = 32,
                                            normalize_type: dl.NormalizeType = dl.NormalizeType.Div255,
                                            img_resize_val: Optional[img_size] = None,
                                            color: str = "RGB"
@@ -221,7 +222,9 @@ def build_input_type_dir_for_large_dataset(model_builder: Callable[[int], keras.
     :param image_generator: keras形式でのデータを水増しするジェネレータ これを引数で渡さない場合はデータの水増しをしない
     :param generator_batch_size: ジェネレータのバッチサイズ　データを水増ししない場合はこれがこのままのサイズで渡され,水増しする場合はbuild_original_data_num倍した分だけデータが水増しされる
     :param build_original_data_num: 1回の試行あたりでまとめて水増しするデータの数
+    :param test_generator_batch_size: 検証用データのバッチサイズ
     :param normalize_type: どのように正規化するか
+    :param generator_batch_size: ジェネレータのバッチサイズ　データを水増ししない場合はこれがこのままのサイズで渡され,水増しする場合はbuild_original_data_num倍した分だけデータが水増しされる
     :param img_resize_val: 画像のサイズをリサイズする際のサイズ　指定しなければオリジナルのサイズのまま読み込み
     :param color: グレースケールかカラーで読み込むか　デフォルトではカラー(RGB)
     :return:
@@ -261,7 +264,7 @@ def build_input_type_dir_for_large_dataset(model_builder: Callable[[int], keras.
             test_data_paths = [dataset_paths[index] for index in test_index]
             print("load test data data num;", len(test_data_paths))
             test_label = [label_set[index] for index in test_index]
-            test_generator = data_loader_base()(test_data_paths, test_label, generator_batch_size)
+            test_generator = data_loader_base()(test_data_paths, test_label, test_generator_batch_size)
 
             # モデル名など設定
             model_name_iter = model_name + str(fold_itr)

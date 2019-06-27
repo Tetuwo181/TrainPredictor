@@ -108,10 +108,11 @@ class DataLoaderFromPathsWithDataAugmentation(Sequence):
         self.__image_generator = image_generator
         self.__augmentation_batch_size = augmentation_batch_size
         self.__build_original_data_num = build_original_data_num
+        batch_size = self.__augmentation_batch_size * self.__build_original_data_num
         self.__img_resize_val = img_resize_val
         self.__color = color
         self.__class_num = class_num
-        self.__num_batches_per_epoch = augmentation_batch_size * build_original_data_num
+        self.__num_batches_per_epoch = ((self.__length - 1) // batch_size) + 1
         self.__normalize_type = normalize_type
         print("initialized data_loader with augument")
 
@@ -129,27 +130,25 @@ class DataLoaderFromPathsWithDataAugmentation(Sequence):
         item_paths = self.__data_paths[start_pos: end_pos]
         labels = self.__data_classes[start_pos: end_pos]
         image_set = np.array([load_img(path, self.__img_resize_val, self.__color) for path in item_paths])
+        build_base = self.__image_generator.flow(image_set, labels, batch_size=self.__build_original_data_num)
 
-        build_base = [self.__image_generator.flow(np.array([normalise_img(image)]),
-                                                  np.array([label]),
-                                                  batch_size=self.__augmentation_batch_size)
-                      for image, label in zip(image_set, labels)]
-
-        return self.build_data(build_base, idx)
+        return self.build_data(build_base)
 
     def __len__(self):
         """Batch length"""
         return self.__num_batches_per_epoch
 
     def build_data(self,
-                   data_flow_set,
-                   idx) -> Tuple[np.ndarray, np.ndarray]:
+                   data_flow,
+                   ) -> Tuple[np.ndarray, np.ndarray]:
         result_data = []
         result_class = []
-        for data_flow in data_flow_set:
-            result_data.extend(np.array([next(data_flow)[0] for i in range(self.__augmentation_batch_size)]))
-            result_class.extend(np.array([next(data_flow)[1] for i in range(self.__augmentation_batch_size)]))
-        return np.array(result_data[idx]), np.array(result_class[idx])
+        for index_of_original_data in range(self.__build_original_data_num):
+            result_data.extend(np.array([next(data_flow)[0][index_of_original_data] for build_num
+                                         in range(self.__augmentation_batch_size)]))
+            result_class.extend(np.array([next(data_flow)[1][index_of_original_data] for build_num
+                                          in range(self.__augmentation_batch_size)]))
+        return normalise_img_set(np.array(result_data), self.__normalize_type), np.array(result_class)
 
 
 def init_loader_setting(
