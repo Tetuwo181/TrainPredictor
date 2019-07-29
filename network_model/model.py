@@ -290,7 +290,9 @@ class ModelForManyData(object):
                       epochs: int,
                       validation_data: Union[Optional[Tuple[np.ndarray, np.ndarray]],
                                              DataLoaderFromPathsWithDataAugmentation,
-                                             DataLoaderFromPaths] = None):
+                                             DataLoaderFromPaths] = None,
+                      steps_per_epoch:Optional[int] = None,
+                      validation_steps:Optional[int] = None):
         """
         モデルの適合度を算出する
         :param image_generator: ファイルパスから学習データを生成する生成器
@@ -301,9 +303,12 @@ class ModelForManyData(object):
         print("fit generator")
         if validation_data is None:
             self.__history = self.__model.fit_generator(image_generator,
+                                                        steps_per_epoch=steps_per_epoch,
                                                         epochs=epochs)
         else:
             self.__history = self.__model.fit_generator(image_generator,
+                                                        steps_per_epoch=steps_per_epoch,
+                                                        validation_steps=validation_steps,
                                                         epochs=epochs,
                                                         validation_data=validation_data)
         return self
@@ -353,7 +358,10 @@ class ModelForManyData(object):
              result_dir_name: str = None,
              dir_path: str = None,
              model_name: str = None,
-             will_del_from_ram: bool = False):
+             will_del_from_ram: bool = False,
+             steps_per_epoch: Optional[int] = None,
+             validation_steps: Optional[int] = None
+             ):
         """
         指定したデータセットに対しての正答率を算出する
         :param image_generator: ファイルパスから学習データを生成する生成器
@@ -369,7 +377,9 @@ class ModelForManyData(object):
         """
         self.fit_generator(image_generator,
                            epochs,
-                           validation_data)
+                           validation_data,
+                           steps_per_epoch=steps_per_epoch,
+                           validation_steps=validation_steps)
         train_rate = self.__history.history['acc'][-1]
         test_rate = self.__history.history['val_acc'][-1]
 

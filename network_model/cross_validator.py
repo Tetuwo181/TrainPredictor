@@ -232,7 +232,6 @@ def build_input_type_dir_for_large_dataset(model_builder: Callable[[int], keras.
 
     dataset_paths, label_set, class_names, class_num = dl.load_dataset_path(dataset_root_dir)
     print("data_num:", len(dataset_paths))
-    skf = StratifiedKFold(n_splits=fold_num)
     data_loader_base = init_loader_setting(class_num, img_resize_val, color, normalize_type)
     train_loader_base = data_loader_base(image_generator)
 
@@ -247,6 +246,7 @@ def build_input_type_dir_for_large_dataset(model_builder: Callable[[int], keras.
         :param model_name: モデルの名前
         :return:
         """
+        skf = StratifiedKFold(n_splits=fold_num)
         label_index_set = [np.argmax(label) for label in label_set]
         for fold_itr, (train_index, test_index) in enumerate(skf.split(dataset_paths, label_index_set)):
             print("iteration", fold_itr, "start")
@@ -281,13 +281,18 @@ def build_input_type_dir_for_large_dataset(model_builder: Callable[[int], keras.
                        dir_path=result_dir_path,
                        model_name=model_name_iter,
                        will_del_from_ram=True)
-            backend.clear_session()
-            # メモリ対策のため削除（モデルの記録自体保存しているため、わざわざメモリ上に残す必要もない）
-            model = None
-            del model
-            gc.collect()
-            print(model_name_iter, "deleted")
-        model = md.Model(model_builder(len(class_names)), class_names)
+        learn_all_data(result_dir_path, model_name)
+
+    def learn_all_data(result_name: str = "result",
+                       model_name: str = "model"
+                       ):
+        """
+        バリデーションを行わず学習のみ行う
+        :param result_name: 結果の出力先名
+        :param model_name: モデルの名前
+        :return:
+        """
+        model = md.ModelForManyData(model_builder(len(class_names)), class_names)
         train_generator = train_loader_base(dataset_paths, label_set, generator_batch_size) \
             if image_generator is None else train_loader_base(dataset_paths,
                                                               label_set,
@@ -300,4 +305,5 @@ def build_input_type_dir_for_large_dataset(model_builder: Callable[[int], keras.
                      normalize_type=normalize_type
                      )
 
-    return test_load_from_path
+    return test_load_from_path if fold_num > 1 else learn_all_data
+

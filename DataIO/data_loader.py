@@ -25,8 +25,11 @@ def is_image(file_path:str) -> bool:
     :return:
     """
     root, ext = os.path.splitext(file_path)
-    return (ext == ".jpg") or (ext == ".jpeg") or (ext == ".JPG") or (ext == ".JPEG")
+    return (ext == ".jpg") or (ext == ".jpeg") or (ext == ".JPG") or (ext == ".JPEG") or (ext == ".jfif")
 
+def count_data_num_in_dir(root_dir: str):
+    path_set, label_set, class_names, class_num = load_dataset_path(root_dir)
+    return len(path_set)
 
 def load_dataset_path(root_dir: str):
     """
