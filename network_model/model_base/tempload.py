@@ -16,19 +16,15 @@ def builder(
             kernel_size: Union[int, Tuple[int, int]] = 3
             ) -> keras.engine.training.Model:
     """
-    ResNet50
-    ImageNetで重みを初期化
-    :param class_num : 出力するクラスの数
-    :param img_size : 画像のピクセル比　整数なら指定したサイズの正方形、タプルなら(raw, cal)
-    :param channels:色の出力変数（白黒画像なら1）
-    :param kernel_size: 本来はいらないけどインターフェース統一のために残している
-    :return: 実行可能なモデル
+    配下においてある中間ファイルのモデルを読み込む
+    インターフェースを無理や知統一するため引数は使わない
+    :param class_num: ダミー
+    :param img_size: ダミー
+    :param channels: ダミー
+    :param kernel_size: ダミー
+    :return:
     """
-    mobile_net = MobileNetV2(include_top=False, alpha=0.75, weights="imagenet",input_shape=(img_size, img_size, channels))
-    h = Flatten()(mobile_net.output)
-    model_output = Dense(class_num, activation="softmax")(h)
-    model = Model(mobile_net.input, model_output)
-
+    model = load_model('temp.h5')
     # モデルの概要を表示
     model.summary()
 
@@ -36,4 +32,3 @@ def builder(
     model.compile(loss="categorical_crossentropy", optimizer=optimizers.SGD(), metrics=['accuracy'])
 
     return model
-

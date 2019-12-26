@@ -33,7 +33,7 @@ def builder(
     model.summary()
 
     # モデルをコンパイル
-    model.compile(loss="binary_crossentropy", optimizer=optimizers.SGD(), metrics=['accuracy'])
+    model.compile(loss="categorical_crossentropy", optimizer=optimizers.SGD(), metrics=['accuracy'])
 
     return model
 

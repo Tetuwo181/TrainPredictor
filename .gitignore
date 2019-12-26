@@ -9,3 +9,4 @@ tflog/
 tmp/
 results/
 url.txt
+*.h5

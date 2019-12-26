@@ -104,7 +104,8 @@ def train(model_builder: Callable[[int], keras.engine.training.Model],
           result_name: str = "result",
           model_name: str = "model",
           has_built: bool = True,
-          will_remove: bool = False
+          will_remove: bool = False,
+          learn_only_original: bool = False,
           ):
     """
 
@@ -134,18 +135,19 @@ def train(model_builder: Callable[[int], keras.engine.training.Model],
                                                                   classes=class_list,
                                                                   class_mode="categorical")
         model_val = md.ModelForManyData(model_builder(len(class_list)), class_list)
+        if learn_only_original == False:
         # テスト開始
-        model_val.test(train_generator,
-                       epoch_num,
-                       test_generator,
-                       normalize_type=normalize_type,
-                       result_dir_name=result_name,
-                       steps_per_epoch=train_data_num/batch_size,
-                       validation_steps=test_data_num/batch_size,
-                       dir_path=result_dir_path,
-                       model_name=model_name+"val",
-                       will_del_from_ram=True
-                       )
+          model_val.test(train_generator,
+                         epoch_num,
+                         test_generator,
+                         normalize_type=normalize_type,
+                         result_dir_name=result_name,
+                         steps_per_epoch=train_data_num/batch_size,
+                         validation_steps=test_data_num/batch_size,
+                         dir_path=result_dir_path,
+                         model_name=model_name+"val",
+                         will_del_from_ram=True
+                        )
         train_generator = train_image_generator.flow_from_directory(dataset_root_dir,
                                                                     target_size=image_size,
                                                                     batch_size=batch_size,

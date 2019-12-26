@@ -12,7 +12,8 @@ def builder(
             img_size: types_of_loco.input_img_size = 28,
             channels: int = 3,
             kernel_size: Union[int, Tuple[int, int]] = 3,
-            model_name: str = "model1"
+            model_name: str = "model1",
+            load_h5:bool =False
             ) -> keras.engine.training.Model:
     """
     モデルを作成する
@@ -42,7 +43,8 @@ def init_input_image(size: types_of_loco.input_img_size):
 def build_wrapper(img_size: types_of_loco.input_img_size = 28,
                   channels: int = 3,
                   kernel_size: Union[int, Tuple[int, int]] = 3,
-                  model_name: str = "model1") -> Callable[[int], keras.engine.training.Model]:
+                  model_name: str = "model1",
+                  load_h5: bool =False) -> Callable[[int], keras.engine.training.Model]:
     """
     モデル生成をする関数を返す
     交差検証をかける際のラッパーとして使う
@@ -52,5 +54,5 @@ def build_wrapper(img_size: types_of_loco.input_img_size = 28,
     :param model_name:
     :return:
     """
-    return lambda class_num: builder(class_num, img_size, channels, kernel_size, model_name)
+    return lambda class_num: builder(class_num, img_size, channels, kernel_size, model_name, load_h5)
 
