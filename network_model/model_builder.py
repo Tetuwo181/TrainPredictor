@@ -3,8 +3,10 @@ import keras.engine.training
 from typing import Callable
 from typing import Union
 from typing import Tuple
+from typing import Union
 from util_types import types_of_loco
 import importlib
+from model_base import tempload
 
 
 def builder(
@@ -44,7 +46,7 @@ def build_wrapper(img_size: types_of_loco.input_img_size = 28,
                   channels: int = 3,
                   kernel_size: Union[int, Tuple[int, int]] = 3,
                   model_name: str = "model1",
-                  load_h5: bool =False) -> Callable[[int], keras.engine.training.Model]:
+                  load_h5: bool =False) -> Union[Callable[[int], keras.engine.training.Model], Callable[[str], keras.engine.training.Model]]:
     """
     モデル生成をする関数を返す
     交差検証をかける際のラッパーとして使う
@@ -54,5 +56,7 @@ def build_wrapper(img_size: types_of_loco.input_img_size = 28,
     :param model_name:
     :return:
     """
+    if model_name == "tempload":
+        return lambda  load_path: tempload.builder(load_path)
     return lambda class_num: builder(class_num, img_size, channels, kernel_size, model_name, load_h5)
 

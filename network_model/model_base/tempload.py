@@ -10,21 +10,15 @@ from util_types import types_of_loco
 
 
 def builder(
-            class_num: int,
-            img_size: types_of_loco.input_img_size = 28,
-            channels: int = 3,
-            kernel_size: Union[int, Tuple[int, int]] = 3
+            temp_filepath: str
             ) -> keras.engine.training.Model:
     """
     配下においてある中間ファイルのモデルを読み込む
     インターフェースを無理や知統一するため引数は使わない
-    :param class_num: ダミー
-    :param img_size: ダミー
-    :param channels: ダミー
-    :param kernel_size: ダミー
+    :param temp_filepath: 中間ファイルのパス
     :return:
     """
-    model = load_model('temp.h5')
+    model = load_model(temp_filepath)
     # モデルの概要を表示
     model.summary()
 
