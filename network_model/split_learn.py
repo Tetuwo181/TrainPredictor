@@ -106,6 +106,7 @@ def train(model_builder: Callable[[int], keras.engine.training.Model],
           has_built: bool = True,
           will_remove: bool = False,
           learn_only_original: bool = False,
+          tmp_path:str = None
           ):
     """
 
@@ -122,6 +123,7 @@ def train(model_builder: Callable[[int], keras.engine.training.Model],
                                                                                                   temp_dir_path,
                                                                                                   train_size,
                                                                                                   has_built)
+        model_val = md.ModelForManyData(model_builder(len(class_list)), class_list) if tmp_path is None else md.ModelForManyData(model_builder(tmp_path), class_list)
         train_dir = os.path.join(temp_dir_path, "train")
         validation_dir = os.path.join(temp_dir_path, "validation")
         train_generator = train_image_generator.flow_from_directory(train_dir,
@@ -134,7 +136,6 @@ def train(model_builder: Callable[[int], keras.engine.training.Model],
                                                                   batch_size=batch_size,
                                                                   classes=class_list,
                                                                   class_mode="categorical")
-        model_val = md.ModelForManyData(model_builder(len(class_list)), class_list)
         if learn_only_original == False:
         # テスト開始
           model_val.test(train_generator,
@@ -153,7 +154,7 @@ def train(model_builder: Callable[[int], keras.engine.training.Model],
                                                                     batch_size=batch_size,
                                                                     classes=class_list,
                                                                     class_mode="categorical")
-        model= md.ModelForManyData(model_builder(len(class_list)), class_list)
+        model = md.ModelForManyData(model_builder(len(class_list)), class_list) if tmp_path is None else md.ModelForManyData(model_builder(tmp_path), class_list)
         model.fit_generator(train_generator, epoch_num,steps_per_epoch=original_data_num/batch_size) \
             .record(result_name,
                  result_dir_path,
